@@ -13,6 +13,11 @@ import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import org.eclipse.paho.android.service.MqttAndroidClient
+import org.eclipse.paho.client.mqttv3.IMqttActionListener
+import org.eclipse.paho.client.mqttv3.IMqttToken
+import java.text.DecimalFormat
+import java.util.*
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -21,14 +26,19 @@ class MainActivity : AppCompatActivity(),SensorEventListener{
 
     private val TAG = "Sensori:";
 
+    private lateinit var mqttClient : MQTTClient
+
+
+
 
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.toolbar))
-        var heartRate =  Random.nextInt(97, 100)
-        Log.d("MSG","Battito: " +  heartRate)
+
+
+
 
         val manager = getSystemService(SENSOR_SERVICE) as SensorManager
         val linearAcc = manager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
@@ -36,6 +46,10 @@ class MainActivity : AppCompatActivity(),SensorEventListener{
         manager.registerListener(this, linearAcc, SensorManager.SENSOR_DELAY_NORMAL);
         Log.d(TAG, "Acceleratore lineare:  " + linearAcc.toString());
        // Log.d(TAG, "Contapassi: " + stepCounter.toString());
+
+        mqttClient = MQTTClient(this,"tcp://broker.hivemq.com:1883","")
+        mqttClient.connect("","")
+
 
         /* Check if Internet connection is available */
         if (!isConnected()) {
@@ -49,10 +63,11 @@ class MainActivity : AppCompatActivity(),SensorEventListener{
         }
     }
 
-
-
-
-
+    private fun heartRate(): Int{
+        var heartRate =  Random.nextInt(97, 100)
+        Log.d("MSG","Battito: " +  heartRate)
+        return heartRate
+    }
 
     private fun isConnected(): Boolean {
         var result = false
@@ -79,6 +94,7 @@ class MainActivity : AppCompatActivity(),SensorEventListener{
                 }
             }
         }
+
         return result
     }
 
@@ -86,16 +102,20 @@ class MainActivity : AppCompatActivity(),SensorEventListener{
         val valori = DoubleArray(3)
         if (event!!.sensor.type === Sensor.TYPE_LINEAR_ACCELERATION) {
             if (event!!.values[0] >= 1 || event.values[1] >= 1 || event.values[2] >= 1) {
-                valori[0] = event.values[0].toDouble().roundToInt() / 100.0
-                valori[1] = event.values[1].toDouble().roundToInt() / 100.0
-                valori[2] = event.values[2].toDouble().roundToInt() / 100.0
+                valori[0] = "%,.2f".format(Locale.ENGLISH, event.values[0]).toDouble()
+                valori[1] = "%,.2f".format(Locale.ENGLISH, event.values[1]).toDouble()
+                valori[2] = "%,.2f".format(Locale.ENGLISH, event.values[2]).toDouble()
                 // Log.d(TAG, "onCreate: Battito: "+heartSensor());
                 Log.d(
                     TAG,
                     "onSensorChanged: X: " + valori[0] + " Y: " + valori[1] + " Z: " + valori[2]
                 )
+                val message = "\n"+"Battito misurato: "+ heartRate()+"\n"+"Movimento X: " + valori[0] + " Y: " + valori[1] + " Z: " + valori[2]
+                mqttClient.publish("CIOTR",message)
             }
+
         }
+
        /* if (event!!.sensor.type === Sensor.TYPE_STEP_COUNTER) {
             var step = 0f
             if (event!!.values[0] >= 1 || event.values[1] >= 1 || event.values[2] >= 1) {
@@ -103,9 +123,22 @@ class MainActivity : AppCompatActivity(),SensorEventListener{
                 Log.d(TAG, "onSensorChanged: X: $step")
             }
         }*/
+
+
     }
 
-    override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
+    private val defaultCbPublish = object : IMqttActionListener {
+        override fun onSuccess(asyncActionToken: IMqttToken?) {
+            Log.d(this.javaClass.name, "Message published to topic")
+        }
+
+        override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
+            TODO("Not yet implemented")
+        }
+    }
+
+
+        override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
         TODO("Not yet implemented")
     }
 }

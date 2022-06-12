@@ -1,5 +1,7 @@
 package com.example.mqttkotlinsample
 
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.os.Bundle
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -10,11 +12,13 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.fragment.findNavController
 import org.eclipse.paho.client.mqttv3.*
 
 class ClientFragment : Fragment() {
     private lateinit var mqttClient : MQTTClient
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -147,6 +151,7 @@ class ClientFragment : Fragment() {
         view.findViewById<Button>(R.id.button_publish).setOnClickListener {
             val topic   = view.findViewById<EditText>(R.id.edittext_pubtopic).text.toString()
             val message = view.findViewById<EditText>(R.id.edittext_pubmsg).text.toString()
+
 
             if (mqttClient.isConnected()) {
                 mqttClient.publish(topic,

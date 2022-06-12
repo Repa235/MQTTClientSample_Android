@@ -1,13 +1,17 @@
 package com.example.mqttkotlinsample
 
 import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.util.Log
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import org.eclipse.paho.android.service.MqttAndroidClient
 import org.eclipse.paho.client.mqttv3.*
 
 class MQTTClient(context: Context?,
                  serverURI: String,
-                 clientID: String = "") {
+                 clientID: String = ""){
     private var mqttClient = MqttAndroidClient(context, serverURI, clientID)
     private val defaultCbConnect = object : IMqttActionListener {
         override fun onSuccess(asyncActionToken: IMqttToken?) {
@@ -21,6 +25,7 @@ class MQTTClient(context: Context?,
     private val defaultCbClient = object : MqttCallback {
         override fun messageArrived(topic: String?, message: MqttMessage?) {
             Log.d(this.javaClass.name, "Receive message: ${message.toString()} from topic: $topic")
+
         }
 
         override fun connectionLost(cause: Throwable?) {
@@ -107,6 +112,7 @@ class MQTTClient(context: Context?,
         }
     }
 
+
     fun publish(topic:      String,
                 msg:        String,
                 qos:        Int                 = 1,
@@ -123,6 +129,8 @@ class MQTTClient(context: Context?,
         }
     }
 
+
+
     fun disconnect(cbDisconnect: IMqttActionListener = defaultCbDisconnect ) {
         try {
             mqttClient.disconnect(null, cbDisconnect)
@@ -130,4 +138,7 @@ class MQTTClient(context: Context?,
             e.printStackTrace()
         }
     }
+
+
+
 }
