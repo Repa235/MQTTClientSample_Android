@@ -9,6 +9,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -42,13 +43,22 @@ class MainActivity : AppCompatActivity(),SensorEventListener{
 
         val manager = getSystemService(SENSOR_SERVICE) as SensorManager
         val linearAcc = manager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
-        //val stepCounter=manager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
+        val giroscopio = manager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        val temperatura = manager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE);
         manager.registerListener(this, linearAcc, SensorManager.SENSOR_DELAY_NORMAL);
+        manager.registerListener(this, giroscopio, SensorManager.SENSOR_DELAY_NORMAL);
+        manager.registerListener(this, temperatura, SensorManager.SENSOR_DELAY_NORMAL);
         Log.d(TAG, "Acceleratore lineare:  " + linearAcc.toString());
-       // Log.d(TAG, "Contapassi: " + stepCounter.toString());
+        Log.d(TAG, "Giroscopio:  " + giroscopio.toString());
+        Log.d(TAG, "Temperatura:  " + temperatura.toString());
+
+
+
+
 
         mqttClient = MQTTClient(this,"tcp://broker.hivemq.com:1883","")
         mqttClient.connect("","")
+
 
 
         /* Check if Internet connection is available */
@@ -98,7 +108,9 @@ class MainActivity : AppCompatActivity(),SensorEventListener{
         return result
     }
 
+
     override fun onSensorChanged(event: SensorEvent?) {
+
         val valori = DoubleArray(3)
         if (event!!.sensor.type === Sensor.TYPE_LINEAR_ACCELERATION) {
             if (event!!.values[0] >= 1 || event.values[1] >= 1 || event.values[2] >= 1) {
@@ -110,21 +122,43 @@ class MainActivity : AppCompatActivity(),SensorEventListener{
                     TAG,
                     "onSensorChanged: X: " + valori[0] + " Y: " + valori[1] + " Z: " + valori[2]
                 )
-                val message = "\n"+"Battito misurato: "+ heartRate()+"\n"+"Movimento X: " + valori[0] + " Y: " + valori[1] + " Z: " + valori[2]
-                mqttClient.publish("CIOTR",message)
-            }
+                val message =
+                    "{\"tmstp\":\"\",\"e\":[" +
+                            "{\"n\":5702,\"v\":" + valori[0] + "}," +
+                            "{\"n\":5703,\"v\":" + valori[1] + "}," +
+                            "{\"n\":5704,\"v\":" + valori[2] + "}" +
+                            "]} "
+                mqttClient.publish("tele/CIOTR/3313/0", message)
+                val message2 =
+                    "{\"tmstp\":\"\",\"e\":[" +
+                            "{\"n\":5500,\"v\":" + heartRate().toString() + "}" +
+                            "]} "
 
+
+                    mqttClient.publish("tele/CIOTR/3200/0", message2)
+
+
+
+            }
         }
-
-       /* if (event!!.sensor.type === Sensor.TYPE_STEP_COUNTER) {
-            var step = 0f
+        //_________________________
+        if (event!!.sensor.type === Sensor.TYPE_GYROSCOPE) {
             if (event!!.values[0] >= 1 || event.values[1] >= 1 || event.values[2] >= 1) {
-                step = event.values[0]
-                Log.d(TAG, "onSensorChanged: X: $step")
+                Log.d(
+                    TAG,
+                    "Giroscopio X: " + event.values[0] + " Y: " + event.values[1] + " Z: " + event.values[2]
+                )
+                val message3="{\"tmstp\":\"\",\"e\":[{\"n\":5702,\"v\":" + valori[0] + "},{\"n\":5703,\"v\":" + valori[1] + "},{\"n\":5704,\"v\":" + valori[2] + "}]} "
+                mqttClient.publish("tele/CIOTR/3334/0", message3)
             }
-        }*/
-
-
+        }
+        //__________________________
+        if (event!!.sensor.type === Sensor.TYPE_AMBIENT_TEMPERATURE) {
+            if (event!!.values[0] >= 1) {
+                Log.d(TAG, "Temperatura: " + event.values[0])
+                //mqttClient.publish("tele/CIOTR/3303/0", message4)
+            }
+        }
     }
 
     private val defaultCbPublish = object : IMqttActionListener {
@@ -138,7 +172,7 @@ class MainActivity : AppCompatActivity(),SensorEventListener{
     }
 
 
-        override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
-        TODO("Not yet implemented")
+    override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
+        //Log.d(TAG,"Accuracy changed")
     }
 }
